@@ -15,7 +15,7 @@
 
 It generates a thumbnail according to the settings, 
 loads it into S3 and 
-updates the original cloud object with an custom header with a link to the thumbnail-file.
+updates the original cloud object with a custom header with a link to the thumbnail-file.
 
 e.g. 
 x-amz-meta-preview-image-url: http://mythumbbucket.s3.mydomain/thumbnails/myfile_thumbnail.jpg

@@ -101,9 +101,6 @@
         }
       }
     },
-    "node-png": {
-      "version": "0.4.3"
-    },
     "request": {
       "version": "2.51.0",
       "dependencies": {
