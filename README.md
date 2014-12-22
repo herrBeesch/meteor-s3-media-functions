@@ -21,7 +21,7 @@ e.g.
 x-amz-meta-preview-image-url: http://mythumbbucket.s3.mydomain/thumbnails/myfile_thumbnail.jpg
 
 
-## Usage
+## Usage (coffeescript)
 ```coffeescript
 
   # Configure your s3-client (dependecy andruschka:awssum-riakcs)
