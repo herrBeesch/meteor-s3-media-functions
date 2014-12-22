@@ -25,5 +25,5 @@ Package.onTest(function(api) {
   api.use('coffeescript');
   api.use('herrbeesch:s3-media-functions');
   api.addFiles('herrbeesch:s3-media-functions-tests.coffee', 'server');
-  api.addFiles('psd.coffee', ['server', 'client']);
+  api.addFiles('psd.js', ['server', 'client']);
 });
