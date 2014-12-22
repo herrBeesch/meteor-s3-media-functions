@@ -15,7 +15,7 @@ Npm.depends({
 Package.onUse(function(api) {
   api.versionsFrom('1.0.1');
   api.use('coffeescript');
-  api.use('andruschka:psdfile-parser', '0.0.6');
+  api.use('andruschka:psdfile-parser@0.0.6');
   api.export('RiakCS', 'server');
   api.addFiles('herrbeesch:s3-media-functions.coffee', 'server');
 });
