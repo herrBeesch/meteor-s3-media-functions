@@ -9,14 +9,13 @@ Npm.depends({
 	'awssum-riakcs': '1.2.0',
   'gm': '1.17.0',
   'video-thumb': '0.0.2',
-  'request': '2.51.0',
-  'node-png': '0.4.3'
+  'request': '2.51.0'
 });
 
 Package.onUse(function(api) {
   api.versionsFrom('1.0.1');
   api.use('coffeescript');
-  api.use('andruschka:psdfile-parser');
+  api.use('andruschka:psdfile-parser', '0.0.6');
   api.export('RiakCS', 'server');
   api.addFiles('herrbeesch:s3-media-functions.coffee', 'server');
 });
