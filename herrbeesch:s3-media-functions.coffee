@@ -1,7 +1,7 @@
 RiakCS = Npm.require 'awssum-riakcs'
 request = Npm.require 'request'
 gm = Npm.require 'gm'
-PSD = require 'PSD'
+# PSD = require 'PSD'
 
 getFileExtension = (fileName)->
   fileSuffixRegex = /\.([0-9a-z]+)(?:[\?#]|$)/i

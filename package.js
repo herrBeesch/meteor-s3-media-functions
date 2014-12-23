@@ -17,6 +17,7 @@ Package.onUse(function(api) {
   api.versionsFrom('1.0.1');
   api.use('coffeescript');
   api.export('RiakCS', 'server');
+  api.addFiles('psd.js', ['server', 'client']);
   api.addFiles('herrbeesch:s3-media-functions.coffee', 'server');
 });
 
