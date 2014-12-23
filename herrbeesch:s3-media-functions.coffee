@@ -1,5 +1,6 @@
 RiakCS = Npm.require 'awssum-riakcs'
 request = Npm.require 'request'
+gm = Npm.require 'gm'
 
 getFileExtension = (fileName)->
   fileSuffixRegex = /\.([0-9a-z]+)(?:[\?#]|$)/i
