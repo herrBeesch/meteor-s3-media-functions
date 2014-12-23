@@ -1758,7 +1758,9 @@ var jspack = new JSPack(); ;
       var Png, buffer, i, pixelData, _i, _ref;
       try {
         Png = Npm.require('png').Png;
+        console.log(Png);
       } catch (e) {
+        console.log(e); 
         throw "Exporting PSDs to file requires the node 'png' library";
       }
       buffer = new Buffer(this.toCanvasPixels().length);

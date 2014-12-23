@@ -1,7 +1,6 @@
 RiakCS = Npm.require 'awssum-riakcs'
 request = Npm.require 'request'
 gm = Npm.require 'gm'
-# PSD = require 'PSD'
 
 getFileExtension = (fileName)->
   fileSuffixRegex = /\.([0-9a-z]+)(?:[\?#]|$)/i
@@ -212,12 +211,12 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
           
                 # B) generate thumbnail (PNG !!!) via psd-file-parser from psd
                 if toDos.indexOf('generate_thumbnail_via_psdfileParser') > -1
-                  psd = PSD.fromFile tmpFile
                   console.log "try to create thumb with psd"
-                  pngThumbTmpFile = "#{tmpPath}/ce_psd_#{Meteor.uuid()}_thumbnail.png"
-                  thumbFileForGm = pngThumbTmpFile                  
-                  filesToDelete.push pngThumbTmpFile
                   try
+                    psd = Meteor.PSD.fromFile tmpFile
+                    pngThumbTmpFile = "#{tmpPath}/ce_psd_#{Meteor.uuid()}_thumbnail.png"
+                    thumbFileForGm = pngThumbTmpFile                  
+                    filesToDelete.push pngThumbTmpFile
                     psd.toFile pngThumbTmpFile, tmpThumbnailForGmReadyCallback
                   catch e
                     callback e, null
