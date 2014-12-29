@@ -102,6 +102,8 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
             toDos.push 'generate_thumbnail_via_gm'
           when 'application/postscript'
             toDos.push 'generate_thumbnail_via_gm'
+          when 'video/x-flv'
+            toDos.push 'generate_thumbnail_from_video'
           when 'video/quicktime'
             toDos.push 'generate_thumbnail_from_video'
           when 'video/mp4'
