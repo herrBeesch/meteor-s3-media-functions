@@ -1,6 +1,7 @@
 RiakCS = Npm.require 'awssum-riakcs'
 request = Npm.require 'request'
 gm = Npm.require 'gm'
+ffmpeg = Npm.require 'fluent-ffmpeg'
 
 getFileExtension = (fileName)->
   fileSuffixRegex = /\.([0-9a-z]+)(?:[\?#]|$)/i
@@ -103,17 +104,18 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
           when 'application/postscript'
             toDos.push 'generate_thumbnail_via_gm'
           when 'video/x-flv'
-            toDos.push 'generate_thumbnail_from_video'
+            toDos.push 'generate_thumbnail_via_ffmpeg'
           when 'video/quicktime'
-            toDos.push 'generate_thumbnail_from_video'
+            toDos.push 'generate_thumbnail_via_ffmpeg'
           when 'video/mp4'
-            toDos.push 'generate_thumbnail_from_video'
+            toDos.push 'generate_thumbnail_via_ffmpeg'
           when 'image/vnd.adobe.photoshop'
             toDos.push 'generate_thumbnail_via_psdfileParser'
           when 'application/x-photoshop'
             toDos.push 'generate_thumbnail_via_psdfileParser'
           when 'application/octet-stream'
-            if getFileExtension(objectName) is 'psd'
+            if getFileExtension(objectName).toLowerCase() is 'psd'
+              console.log getFileExtension(objectName).toLowerCase()
               toDos.push 'generate_thumbnail_via_psdfileParser'
         if toDos.length is 0
           callback "Cannot create thumbnail from contentType: #{contentType}", null
@@ -126,7 +128,12 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
               fs.mkdirSync tmpPath
             catch e
               console.log e unless e.code is 'EEXIST'
-            tmpFile = "#{tmpPath}/#{new Date().getTime()}_#{removeFileExtension getFileName objectName}.#{origFileSuffix}"
+            wd = "#{tmpPath}/#{origObjectEtag}"
+            try
+              fs.mkdirSync wd
+            catch e
+              console.log e unless e.code is 'EEXIST'
+            tmpFile = "#{wd}/#{removeFileExtension getFileName objectName}.#{origFileSuffix}"
             origFileStream = fs.createWriteStream(tmpFile)
             # download File from cloud
             request.get(objUrl).pipe(origFileStream)   
@@ -142,16 +149,19 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                 # file download done                          
                 # steps to create similar thumbnails
                 filesToDelete = [tmpFile]
+                foldersToDelete = [wd]
                 tmpThumbnailForGmReadyCallback = ()->
+                  
                   gmImage = gm(thumbFileForGm)
                   gmImage = gmImage.colorspace("RGB").flatten()
                   gmImage = gmImage.resize(thumbWidth, thumbHeight)
                   gmImage = gmImage.gravity("Center")
                   # gmImage = gmImage.background("white") 
                   # gmImage = gmImage.extent(thumbWidth, thumbHeight)
-                  thumbFileForCloud = "#{tmpPath}/ce_#{Meteor.uuid()}_thumbnail.jpg"
+                  tnContentType = 'jpg'
+                  thumbFileForCloud = "#{wd}/thumbnail.#{tnContentType}"
                   tmpFileStream = fs.createWriteStream thumbFileForCloud
-                  gmImage.stream('JPG').pipe tmpFileStream
+                  gmImage.stream(tnContentType).pipe tmpFileStream
                   filesToDelete.push thumbFileForGm
                   filesToDelete.push thumbFileForCloud
                   tmpFileStream
@@ -161,25 +171,34 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                           if err?
                             console.log "Error deleting #{file}"
                             console.log err
-                      cb err, null
+                      for folder in foldersToDelete
+                        fs.rmdir folder, (err)->
+                          if err?
+                            console.log "Error deleting #{folder}"
+                            console.log err
+                      callback err, null
                     .on 'close', ()->
-                      for file in filesToDelete                        
+                      for file in filesToDelete
                         fs.unlink file, (err)->
                           if err?
                             console.log "Error deleting #{file}"
                             console.log err
+                      for folder in foldersToDelete
+                        fs.rmdir folder, (err)->
+                          if err?
+                            console.log "Error deleting #{folder}"
+                            console.log err
                     .on 'finish', ()->
-                      # console.log "finish"
+                      console.log "now finished"
                       stats = fs.statSync thumbFileForCloud
                       if stats? and stats.size?
-                        tmpFileSize = stats.size
-                        # upload to riak        
-                        thumbObjectName = "#{prefix}#{removeFileExtension objectName}_thumbnail.jpg"
+                        # upload to riak                        
+                        thumbObjectName = "#{prefix}#{removeFileExtension objectName}_thumbnail.#{tnContentType}"
                         poOpts =
                           BucketName: thumbBucket
                           ObjectName: thumbObjectName
-                          ContentType: "image/jpg"
-                          ContentLength: tmpFileSize
+                          ContentType: "image/#{tnContentType}"
+                          ContentLength: stats.size
                           Acl: acl
                           Body: fs.createReadStream thumbFileForCloud
                         self.PutObject poOpts, (err, result)->
@@ -188,6 +207,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                             console.log thumbObjectName
                             console.log thumbFileForCloud                      
                             console.log err
+                            callback err, null
                           else
                             thumbObjUrl = "http://#{thumbBucket}.#{self.hostUrl}/#{thumbObjectName}"                  
                             if result.StatusCode is 200   
@@ -199,12 +219,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                                 ObjectName: objectName
                               self.UpdateObjectHeaders uhOpts, headers, callback
                       else
-                        console.log "Could not stat fileSize for #{thumbFileForCloud}" 
-                        for file in filesToDelete
-                          fs.unlink file, (err)->
-                            if err?
-                              console.log "Error deleting #{file}"
-                              console.log err
+                        console.log "Could not stat fileSize for #{thumbFileForCloud}"
               
                 # A) generate thumbnail via graphicsmagick from png, jpg, tiff, gif
                 if toDos.indexOf('generate_thumbnail_via_gm') > -1
@@ -213,30 +228,99 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
           
                 # B) generate thumbnail (PNG !!!) via psd-file-parser from psd
                 if toDos.indexOf('generate_thumbnail_via_psdfileParser') > -1
-                  console.log "try to create thumb with psd"
+                  # console.log "try to create thumb with psd"
                   try
                     psd = Meteor.PSD.fromFile tmpFile
-                    pngThumbTmpFile = "#{tmpPath}/ce_psd_#{Meteor.uuid()}_thumbnail.png"
-                    thumbFileForGm = pngThumbTmpFile                  
-                    filesToDelete.push pngThumbTmpFile
-                    psd.toFile pngThumbTmpFile, tmpThumbnailForGmReadyCallback
+                    thumbFileForGm = "#{wd}/tn.png"
+                    psd.toFile thumbFileForGm, tmpThumbnailForGmReadyCallback
                   catch e
                     callback e, null
           
-                # C) generate thumbnail via video-thumb from video
-                if toDos.indexOf('generate_thumbnail_from_video') > -1
-                  exec = Npm.require('child_process').exec
-                  videoThumbTmpFile = "#{tmpPath}/ce_#{Meteor.uuid()}_video_thumbnail.jpg"
-                  cmd = 'ffmpeg -i ' + tmpFile + ' -ss ' + '00:00:05' + ' -vframes 1  -an  -f image2 ' + videoThumbTmpFile 
-                  thumbFileForGm = videoThumbTmpFile              
-                  filesToDelete.push videoThumbTmpFile
-                  try
-                    exec cmd, tmpThumbnailForGmReadyCallback
-                  catch e
-                    callback e, null
+                # C) generate thumbnail via ffmpeg from video
+                if toDos.indexOf('generate_thumbnail_via_ffmpeg') > -1                  
+                  ffmpeg tmpFile
+                    .on 'error', (err, stdout, stderr)-> 
+                      console.log err
+                      console.log stdout
+                      console.log stderr
+                      callback err, null
+                    .on 'end', ()->
+                      thumbFileForGm = "#{wd}/tn.png"
+                      tmpThumbnailForGmReadyCallback()
+                    .takeScreenshots({ count: 1, timemarks: [ '00:00:02.000'] }, wd)
           else
             callback "no etag in cloud object found.", null
   opts = 
     BucketName: bucketName
     ObjectName: objectName
   self.GetObjectMetadata opts, gotMetaDataCallback
+
+RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
+  sourceObjectName = opts.SourceObjectName
+  sourceBucketName = opts.SourceBucketName
+  targetObjectName = opts.TargetObjectName
+  targetBucketName = opts.TargetBucketName
+  acl = opts.Acl
+  tmpPath = "#{opts.TempPath}/s3media_processes"
+  self = this
+  callback = _.once callback
+  
+  #get stream from source
+  getOpts = 
+    BucketName: sourceBucketName
+    ObjectName: sourceObjectName
+  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"  
+  mp3File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp3"  
+  tmpFileStream = fs.createWriteStream tmpFile
+  self.GetObject getOpts, {stream: true}, (err, data)->
+    if err?
+      callback err, null
+    else
+      #extract audio from video stream
+      data.Stream.pipe tmpFileStream      
+      tmpFileStream
+        .on 'error', (err)->
+          console.log err
+          fs.unlink tmpFile, (err)->
+            if err?
+              console.log "could not delete #{tmpFile}"
+              console.log err
+          callback err, null
+        .on 'finish', ()->
+          ffmpeg tmpFile
+            .on 'error', (err, stdout, stderr)-> 
+              console.log err
+              console.log stdout
+              console.log stderr
+              callback err, null
+            .on 'end', ()->
+              #upload the result
+              stats = fs.statSync mp3File
+              if stats? and stats.size?
+                poOpts =
+                  BucketName: targetBucketName
+                  ObjectName: targetObjectName
+                  ContentType: "audio/mpeg"
+                  ContentLength: stats.size
+                  Acl: acl
+                  Body: fs.createReadStream mp3File
+                self.PutObject poOpts, (err, result)->
+                  if err?
+                    console.log "Could not upload #{thumbObjectName}"
+                    console.log thumbObjectName
+                    console.log thumbFileForCloud
+                    console.log err
+                    callback err, null
+                  fs.unlink mp3File, (err)->
+                    if err?
+                      console.log "could not delete #{mp3File}"
+                  fs.unlink tmpFile, (err)->
+                    if err?
+                      console.log "could not delete #{tmpFile}"
+                  callback null, result
+              else
+                callback "could not stat file", null
+            .toFormat('mp3')
+            .save(mp3File)
+  
+  
