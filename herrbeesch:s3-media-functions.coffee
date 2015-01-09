@@ -320,6 +320,7 @@ RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
                   callback null, result
               else
                 callback "could not stat file", null
+            .audioCodec('libmp3lame')
             .toFormat('mp3')
             .save(mp3File)
   
