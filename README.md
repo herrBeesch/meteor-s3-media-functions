@@ -13,12 +13,18 @@
 
 ### What does it do ?
 
+#### UpdateMetaThumbnailHeader
+
 It generates a thumbnail according to the settings, 
 loads it into S3 and 
 updates the original cloud object with a custom header with a link to the thumbnail-file.
 
 e.g. 
 x-amz-meta-preview-image-url: http://mythumbbucket.s3.mydomain/thumbnails/myfile_thumbnail.jpg
+
+#### ExtractAudio
+
+It extracts audio as mp3 from video and puts it as a new object
 
 
 ## Usage (coffeescript)
@@ -49,5 +55,19 @@ x-amz-meta-preview-image-url: http://mythumbbucket.s3.mydomain/thumbnails/myfile
       console.log err
     else
       console.log result
+
+  eaOpts = 
+    SourceObjectName: "myCoolVideo.mp4"
+    SourceBucketName: "videos"
+    TargetObjectName: "audio_from_myCoolVideo.mp3"
+    TargetBucketName: "audio"
+    Acl: "public-read"
+    TempPath: "/tmp"
+  cloud.ExtractAudio eaOpts, Meteor.bindEnvironment (err, result)->
+    if err?
+      console.log err
+    else
+      console.log result
+  
 ```
 
