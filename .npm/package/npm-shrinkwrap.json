@@ -109,6 +109,14 @@
         }
       }
     },
+    "jszip": {
+      "version": "2.5.0",
+      "dependencies": {
+        "pako": {
+          "version": "0.2.5"
+        }
+      }
+    },
     "png": {
       "version": "3.0.3"
     },

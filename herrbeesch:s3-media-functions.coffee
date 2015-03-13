@@ -2,7 +2,7 @@ RiakCS = Npm.require 'awssum-riakcs'
 request = Npm.require 'request'
 gm = Npm.require 'gm'
 ffmpeg = Npm.require 'fluent-ffmpeg'
-
+JSZip = Npm.require 'jszip'
 getFileExtension = (fileName)->
   fileSuffixRegex = /\.([0-9a-z]+)(?:[\?#]|$)/i
   ext = null
@@ -103,6 +103,8 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
             toDos.push 'generate_thumbnail_via_gm'
           when 'application/postscript'
             toDos.push 'generate_thumbnail_via_gm'
+          when 'application/zip'
+            toDos.push 'generate_thumbnail_via_jszip_and_gm'
           when 'video/x-flv'
             toDos.push 'generate_thumbnail_via_ffmpeg'
           when 'video/quicktime'
@@ -162,7 +164,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                   thumbFileForCloud = "#{wd}/thumbnail.#{tnContentType}"
                   tmpFileStream = fs.createWriteStream thumbFileForCloud
                   gmImage.stream(tnContentType).pipe tmpFileStream
-                  filesToDelete.push thumbFileForGm
+                  filesToDelete.push thumbFileForGm unless thumbFileForGm instanceof Buffer
                   filesToDelete.push thumbFileForCloud
                   tmpFileStream
                     .on 'error', (err)->
@@ -189,7 +191,6 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                             console.log "Error deleting #{folder}"
                             console.log err
                     .on 'finish', ()->
-                      console.log "now finished"
                       stats = fs.statSync thumbFileForCloud
                       if stats? and stats.size?
                         # upload to riak                        
@@ -248,6 +249,25 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                       thumbFileForGm = "#{wd}/tn.png"
                       tmpThumbnailForGmReadyCallback()
                     .takeScreenshots({ count: 1, timemarks: [ '00:00:02.000'] }, wd)
+                # D) unzip and search for the first jpg image in archive
+                if toDos.indexOf('generate_thumbnail_via_jszip_and_gm') > -1
+                  fs.readFile tmpFile, (err, data)->
+                    if err?
+                      console.log "could not read file #{tmpFile}"
+                      console.log err
+                    else
+                      zip = new JSZip(data)
+                      if zip?
+                        jpgFileNames = _.reject _.keys(zip.files), (name)->
+                          getFileExtension(name) isnt 'jpg'
+                        if jpgFileNames? and jpgFileNames.length > 0
+                          jpgFileName = _.first _.uniq jpgFileNames
+                          thumbFileForGm = zip.file(jpgFileName).asNodeBuffer()
+                          tmpThumbnailForGmReadyCallback()
+                        else
+                          console.log "Archive includs no jpg to handle"
+                      else
+                        console.log "could not read zip archive"    
           else
             callback "no etag in cloud object found.", null
   opts = 
