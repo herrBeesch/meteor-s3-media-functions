@@ -26,6 +26,10 @@ x-amz-meta-preview-image-url: http://mythumbbucket.s3.mydomain/thumbnails/myfile
 
 It extracts audio as mp3 from video and puts it as a new object
 
+#### ConvertVideoToMp4
+
+Converts an existing video-file to mp4 and puts it as a new object
+
 
 ## Usage (coffeescript)
 ```coffeescript
@@ -64,6 +68,19 @@ It extracts audio as mp3 from video and puts it as a new object
     Acl: "public-read"
     TempPath: "/tmp"
   cloud.ExtractAudio eaOpts, Meteor.bindEnvironment (err, result)->
+    if err?
+      console.log err
+    else
+      console.log result
+
+  cvOpts = 
+    SourceObjectName: "myUglyFormatVideo.flv"
+    SourceBucketName: "flvvideos"
+    TargetObjectName: "myCoolVideo.mp4"
+    TargetBucketName: "mp4heaven"
+    Acl: "public-read"
+    TempPath: "/tmp"
+  cloud.ConvertVideoToMp4 cvOpts, Meteor.bindEnvironment (err, result)->
     if err?
       console.log err
     else

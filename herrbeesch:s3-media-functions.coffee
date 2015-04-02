@@ -326,7 +326,7 @@ RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
                   Body: fs.createReadStream mp3File
                 self.PutObject poOpts, (err, result)->
                   if err?
-                    console.log "Could not upload #{thumbObjectName}"
+                    console.log "Could not upload #{targetObjectName}"
                     console.log thumbObjectName
                     console.log thumbFileForCloud
                     console.log err
@@ -343,5 +343,72 @@ RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
             .audioCodec('libmp3lame')
             .toFormat('mp3')
             .save(mp3File)
+RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
+  sourceObjectName = opts.SourceObjectName
+  sourceBucketName = opts.SourceBucketName
+  targetObjectName = opts.TargetObjectName
+  targetBucketName = opts.TargetBucketName
+  acl = opts.Acl
+  tmpPath = "#{opts.TempPath}/s3media_processes"
+  self = this
+  callback = _.once callback
+  
+  #get stream from source
+  getOpts = 
+    BucketName: sourceBucketName
+    ObjectName: sourceObjectName
+  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"  
+  mp4File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp4"  
+  tmpFileStream = fs.createWriteStream tmpFile
+  self.GetObject getOpts, {stream: true}, (err, data)->
+    if err?
+      callback err, null
+    else
+      data.Stream.pipe tmpFileStream      
+      tmpFileStream
+        .on 'error', (err)->
+          console.log err
+          fs.unlink tmpFile, (err)->
+            if err?
+              console.log "could not delete #{tmpFile}"
+              console.log err
+          callback err, null
+        .on 'finish', ()->
+          ffmpeg tmpFile
+            .on 'error', (err, stdout, stderr)-> 
+              console.log err
+              console.log stdout
+              console.log stderr
+              callback err, null
+            .on 'end', ()->
+              #upload the result
+              stats = fs.statSync mp4File
+              if stats? and stats.size?
+                poOpts =
+                  BucketName: targetBucketName
+                  ObjectName: targetObjectName
+                  ContentType: "video/mp4"
+                  ContentLength: stats.size
+                  Acl: acl
+                  Body: fs.createReadStream mp4File
+                self.PutObject poOpts, (err, result)->
+                  if err?
+                    console.log "Could not upload #{targetObjectName}"
+                    console.log thumbObjectName
+                    console.log thumbFileForCloud
+                    console.log err
+                    callback err, null
+                  fs.unlink mp4File, (err)->
+                    if err?
+                      console.log "could not delete #{mp4File}"
+                  fs.unlink tmpFile, (err)->
+                    if err?
+                      console.log "could not delete #{tmpFile}"
+                  callback null, result
+              else
+                callback "could not stat file", null
+            .audioCodec('libmp3lame')
+            .videoCodec('libx264')
+            .save(mp4File)
   
   
