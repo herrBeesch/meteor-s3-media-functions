@@ -1,16 +1,16 @@
 Package.describe({
   name: 'herrbeesch:s3-media-functions',
   summary: 'extend s3 with some media functions',
-  version: '0.0.15',
+  version: '0.0.16',
   git: 'https://github.com/herrBeesch/meteor-s3-media-functions.git'
 });
 
 Npm.depends({
 	'awssum-riakcs': '1.2.0',
-  'gm': '1.17.0',
-  'request': '2.51.0',
+  'gm': '1.18.1',
+  'request': '2.58.0',
   'png': '3.0.3',
-  "fluent-ffmpeg": '2.0.0-rc3',
+  "fluent-ffmpeg": '2.0.1',
   'jszip': '2.5.0'
 });
 
