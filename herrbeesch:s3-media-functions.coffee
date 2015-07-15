@@ -352,7 +352,6 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
   tmpPath = "#{opts.TempPath}/s3media_processes"
   self = this
   callback = _.once callback
-  
   #get stream from source
   getOpts = 
     BucketName: sourceBucketName
@@ -407,7 +406,6 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
                   callback null, result
               else
                 callback "could not stat file", null
-            .audioCodec('libfaac')
             .videoCodec('libx264')
             .save(mp4File)
   
