@@ -407,7 +407,7 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
                   callback null, result
               else
                 callback "could not stat file", null
-            .audioCodec('libmp3lame')
+            .audioCodec('libfaac')
             .videoCodec('libx264')
             .save(mp4File)
   
