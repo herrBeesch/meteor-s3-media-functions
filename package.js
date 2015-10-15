@@ -1,7 +1,7 @@
 Package.describe({
   name: 'herrbeesch:s3-media-functions',
   summary: 'extend s3 with some media functions',
-  version: '0.0.25',
+  version: '0.0.26',
   git: 'https://github.com/herrBeesch/meteor-s3-media-functions.git'
 });
 
@@ -20,12 +20,4 @@ Package.onUse(function(api) {
   api.export('RiakCS', 'server');
   api.addFiles('psd.js', ['server', 'client']);
   api.addFiles('herrbeesch:s3-media-functions.coffee', 'server');
-});
-
-Package.onTest(function(api) {
-  api.use('tinytest');
-  api.use('coffeescript');
-  api.use('herrbeesch:s3-media-functions');
-  api.addFiles('herrbeesch:s3-media-functions-tests.coffee', 'server');
-  api.addFiles('psd.js', ['server', 'client']);
 });
