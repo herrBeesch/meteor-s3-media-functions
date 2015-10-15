@@ -19,7 +19,7 @@ removeFileExtension = (fileName)->
     if fileSuffixRegex.exec(fileName).length is 1
       fileNameExtension = fileSuffixRegex.exec(fileName)[0]
     else if fileSuffixRegex.exec(fileName).length > 1
-      fileNameExtension = fileSuffixRegex.exec(fileName)[1]        
+      fileNameExtension = fileSuffixRegex.exec(fileName)[1]
     fileNameWithoutExtension = fileName.replace fileSuffixRegex.exec(fileName)[0], ''
   return fileNameWithoutExtension
 getFileName = (objName)->
@@ -31,7 +31,7 @@ RiakCS.S3.prototype.PutObjectHeaders = (BucketName, ObjectName, headers, callbac
   args = {
     method  : 'PUT',
     uri     : self.protocol() + '://' + BucketName + '.' + self.hostUrl + '/' + ObjectName,
-    headers : headers,    
+    headers : headers,
     aws     : {
       key: self.accessKeyId(),
       secret: self.secretAccessKey(),
@@ -51,8 +51,8 @@ RiakCS.S3.prototype.UpdateObjectHeaders = (opts, headers, callback)->
       console.log "CloudFunctions: Error in UpdateObjectHeaders"
       console.log "Error getting metadata from #{ObjectName}"
       console.log err
-    else             
-      headers = _.extend existingHeaders, headers 
+    else
+      headers = _.extend existingHeaders, headers
       headers = _.extend headers, {
         'x-amz-copy-source': "#{opts.BucketName}/#{opts.ObjectName}",
         'x-amz-metadata-directive': 'REPLACE'
@@ -68,9 +68,9 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
   thumbWidth = opts.ThumbWidth
   thumbHeight = opts.ThumbHeight
   if opts.HeaderKey?
-    headerKey =  opts.HeaderKey 
+    headerKey =  opts.HeaderKey
   else
-    headerKey = "x-amz-meta-preview-image-url"  
+    headerKey = "x-amz-meta-preview-image-url"
   acl = opts.Acl
   prefix  = opts.Prefix
   tmpPath = "#{opts.TempPath}/s3media_processes"
@@ -79,18 +79,18 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
   gotMetaDataCallback = (err, result)->
     if err?
       callback err, undefined
-    else                
+    else
       if result.StatusCode isnt 200
         callback result, undefined
       else
-        metaData = result.Headers      
+        metaData = result.Headers
         if metaData['content-type']?
           contentType = metaData['content-type']
         else if metaData['Content-Type']?
           contentType = metaData['Content-Type']
-        toDos = []        
-        # console.log contentType 
-        switch contentType 
+        toDos = []
+        # console.log contentType
+        switch contentType
           when 'image/png'
             toDos.push 'generate_thumbnail_via_gm'
           when 'image/gif'
@@ -104,6 +104,8 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
           when 'application/postscript'
             toDos.push 'generate_thumbnail_via_gm'
           when 'application/zip'
+            toDos.push 'generate_thumbnail_via_jszip_and_gm'
+          when 'x-zip-compressed'
             toDos.push 'generate_thumbnail_via_jszip_and_gm'
           when 'video/x-flv'
             toDos.push 'generate_thumbnail_via_ffmpeg'
@@ -123,7 +125,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
           callback "Cannot create thumbnail from contentType: #{contentType}", null
         else
           if metaData['etag']?
-            origObjectEtag = metaData['etag'].replace(/["']/g, "")        
+            origObjectEtag = metaData['etag'].replace(/["']/g, "")
             objUrl = "http://#{bucketName}.#{self.hostUrl}/#{objectName}"
             origFileSuffix = objectName.substr((objectName.lastIndexOf(".") >>> 0) + 1)
             try
@@ -138,27 +140,27 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
             tmpFile = "#{wd}/#{removeFileExtension getFileName objectName}.#{origFileSuffix}"
             origFileStream = fs.createWriteStream(tmpFile)
             # download File from cloud
-            request.get(objUrl).pipe(origFileStream)   
+            request.get(objUrl).pipe(origFileStream)
             #thumbnail generation
             origFileStream
               .on 'error', (err)->
                 fs.unlink tmpFile, (err)->
                   if err?
                     console.log "Error deleting #{tmpFile}"
-                    console.log err            
+                    console.log err
                 callback err, null
               .on 'finish', ()->
-                # file download done                          
+                # file download done
                 # steps to create similar thumbnails
                 filesToDelete = [tmpFile]
                 foldersToDelete = [wd]
                 tmpThumbnailForGmReadyCallback = ()->
-                  
+
                   gmImage = gm(thumbFileForGm)
                   gmImage = gmImage.colorspace("RGB").flatten()
                   gmImage = gmImage.resize(thumbWidth, thumbHeight)
                   gmImage = gmImage.gravity("Center")
-                  # gmImage = gmImage.background("white") 
+                  # gmImage = gmImage.background("white")
                   # gmImage = gmImage.extent(thumbWidth, thumbHeight)
                   tnContentType = 'jpg'
                   thumbFileForCloud = "#{wd}/thumbnail.#{tnContentType}"
@@ -168,7 +170,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                   filesToDelete.push thumbFileForCloud
                   tmpFileStream
                     .on 'error', (err)->
-                      for file in filesToDelete                        
+                      for file in filesToDelete
                         fs.unlink file, (err)->
                           if err?
                             console.log "Error deleting #{file}"
@@ -193,7 +195,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                     .on 'finish', ()->
                       stats = fs.statSync thumbFileForCloud
                       if stats? and stats.size?
-                        # upload to riak                        
+                        # upload to riak
                         thumbObjectName = "#{prefix}#{removeFileExtension objectName}_thumbnail.#{tnContentType}"
                         poOpts =
                           BucketName: thumbBucket
@@ -206,12 +208,12 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                           if err?
                             console.log "Could not upload #{thumbObjectName}"
                             console.log thumbObjectName
-                            console.log thumbFileForCloud                      
+                            console.log thumbFileForCloud
                             console.log err
                             callback err, null
                           else
-                            thumbObjUrl = "http://#{thumbBucket}.#{self.hostUrl}/#{thumbObjectName}"                  
-                            if result.StatusCode is 200   
+                            thumbObjUrl = "http://#{thumbBucket}.#{self.hostUrl}/#{thumbObjectName}"
+                            if result.StatusCode is 200
                               # update headers of object with metadata from thumbnail
                               headers = {}
                               headers["#{headerKey}"] = thumbObjUrl
@@ -221,12 +223,12 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                               self.UpdateObjectHeaders uhOpts, headers, callback
                       else
                         console.log "Could not stat fileSize for #{thumbFileForCloud}"
-              
+
                 # A) generate thumbnail via graphicsmagick from png, jpg, tiff, gif
                 if toDos.indexOf('generate_thumbnail_via_gm') > -1
                   thumbFileForGm = tmpFile
                   tmpThumbnailForGmReadyCallback()
-          
+
                 # B) generate thumbnail (PNG !!!) via psd-file-parser from psd
                 if toDos.indexOf('generate_thumbnail_via_psdfileParser') > -1
                   # console.log "try to create thumb with psd"
@@ -236,11 +238,11 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                     psd.toFile thumbFileForGm, tmpThumbnailForGmReadyCallback
                   catch e
                     callback e, null
-          
+
                 # C) generate thumbnail via ffmpeg from video
-                if toDos.indexOf('generate_thumbnail_via_ffmpeg') > -1                  
+                if toDos.indexOf('generate_thumbnail_via_ffmpeg') > -1
                   ffmpeg tmpFile
-                    .on 'error', (err, stdout, stderr)-> 
+                    .on 'error', (err, stdout, stderr)->
                       console.log err
                       console.log stdout
                       console.log stderr
@@ -267,10 +269,10 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                         else
                           console.log "Archive includs no jpg to handle"
                       else
-                        console.log "could not read zip archive"    
+                        console.log "could not read zip archive"
           else
             callback "no etag in cloud object found.", null
-  opts = 
+  opts =
     BucketName: bucketName
     ObjectName: objectName
   self.GetObjectMetadata opts, gotMetaDataCallback
@@ -284,20 +286,20 @@ RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
   tmpPath = "#{opts.TempPath}/s3media_processes"
   self = this
   callback = _.once callback
-  
+
   #get stream from source
-  getOpts = 
+  getOpts =
     BucketName: sourceBucketName
     ObjectName: sourceObjectName
-  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"  
-  mp3File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp3"  
+  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"
+  mp3File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp3"
   tmpFileStream = fs.createWriteStream tmpFile
   self.GetObject getOpts, {stream: true}, (err, data)->
     if err?
       callback err, null
     else
       #extract audio from video stream
-      data.Stream.pipe tmpFileStream      
+      data.Stream.pipe tmpFileStream
       tmpFileStream
         .on 'error', (err)->
           console.log err
@@ -308,7 +310,7 @@ RiakCS.S3.prototype.ExtractAudio  = (opts, callback)->
           callback err, null
         .on 'finish', ()->
           ffmpeg tmpFile
-            .on 'error', (err, stdout, stderr)-> 
+            .on 'error', (err, stdout, stderr)->
               console.log err
               console.log stdout
               console.log stderr
@@ -353,17 +355,17 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
   self = this
   callback = _.once callback
   #get stream from source
-  getOpts = 
+  getOpts =
     BucketName: sourceBucketName
     ObjectName: sourceObjectName
-  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"  
-  mp4File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp4"  
+  tmpFile = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}"
+  mp4File = "#{tmpPath}/#{sourceObjectName.replace /\//g, '_'}.mp4"
   tmpFileStream = fs.createWriteStream tmpFile
   self.GetObject getOpts, {stream: true}, (err, data)->
     if err?
       callback err, null
     else
-      data.Stream.pipe tmpFileStream      
+      data.Stream.pipe tmpFileStream
       tmpFileStream
         .on 'error', (err)->
           console.log err
@@ -374,7 +376,7 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
           callback err, null
         .on 'finish', ()->
           ffmpeg tmpFile
-            .on 'error', (err, stdout, stderr)-> 
+            .on 'error', (err, stdout, stderr)->
               console.log err
               console.log stdout
               console.log stderr
@@ -408,5 +410,3 @@ RiakCS.S3.prototype.ConvertVideoToMp4  = (opts, callback)->
                 callback "could not stat file", null
             .videoCodec('libx264')
             .save(mp4File)
-  
-  
