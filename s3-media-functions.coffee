@@ -105,7 +105,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
             toDos.push 'generate_thumbnail_via_gm'
           when 'application/zip'
             toDos.push 'generate_thumbnail_via_jszip_and_gm'
-          when 'x-zip-compressed'
+          when 'application/x-zip-compressed'
             toDos.push 'generate_thumbnail_via_jszip_and_gm'
           when 'video/x-flv'
             toDos.push 'generate_thumbnail_via_ffmpeg'
