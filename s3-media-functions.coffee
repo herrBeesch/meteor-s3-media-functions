@@ -250,7 +250,7 @@ RiakCS.S3.prototype.UpdateMetaThumbnailHeader = (opts, callback)->
                     .on 'end', ()->
                       thumbFileForGm = "#{wd}/tn.png"
                       tmpThumbnailForGmReadyCallback()
-                    .takeScreenshots({ count: 1, timemarks: [ '00:00:02.000'] }, wd)
+                    .takeScreenshots({ count: 1, timemarks: [ '00:00:10.000'] }, wd)
                 # D) unzip and search for the first jpg image in archive
                 if toDos.indexOf('generate_thumbnail_via_jszip_and_gm') > -1
                   fs.readFile tmpFile, (err, data)->

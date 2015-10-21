@@ -7,7 +7,7 @@ coffeescript@1.0.10
 ecmascript@0.1.5
 ecmascript-collections@0.1.6
 ejson@1.0.7
-herrbeesch:s3-media-functions@0.0.28
+herrbeesch:s3-media-functions@0.0.29
 meteor@1.1.9
 promise@0.5.0
 random@1.0.4
